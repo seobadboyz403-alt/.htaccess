@@ -1,0 +1,100 @@
+# ============================================
+# ANTI BACKDOOR & WEBSHELL PROTECTION
+# ============================================
+
+# Matikan directory listing
+Options -Indexes
+
+# Blokir akses ke file dotfile (.env, .git, .htaccess, dll)
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# ============================================
+# BLOKIR SEMUA EKSTENSI BERBAHAYA
+# ============================================
+<FilesMatch "(?i)\.(php|php[0-9]|phtml|phtm|pht|phar|phps|php~|phtml~|phar~|
+               shtml|stm|shtm|shtml~|
+               inc|inc~|tpl|ctp|module|
+               asp|aspx|ashx|asmx|ascx|aspx~|
+               jsp|jspx|jspf|jsw|jsv|jsp~|
+               cgi|cgi~|pl|pl~|py|py~|pyc|rb|rb~|
+               sh|ksh|bash|csh|zsh|sh~|
+               exe|bat|cmd|com|scr|msi|dll|so|jar|
+               vbs|vbe|wsf|wsc|ws|js|jse|js~|
+               hta|htaccess|htpasswd|
+               bak|old|save|swp|swo|tmp|log|sql|db|sqlite)$">
+    Require all denied
+</FilesMatch>
+
+# ============================================
+# BLOKIR DOUBLE EXTENSION (webshell trick)
+# contoh: gambar.jpg.php, file.png.phtml
+# ============================================
+<FilesMatch "(?i)\.(jpg|jpeg|png|gif|bmp|webp|ico|svg|pdf|doc|docx|xls|xlsx|ppt|pptx|zip|rar|tar|gz|mp3|mp4|avi|mov|txt|xml|css)\.(php|phtml|phtm|pht|phar|shtml|asp|aspx|jsp|cgi|pl|py|sh|exe)$">
+    Require all denied
+</FilesMatch>
+
+# ============================================
+# BLOKIR AKSES LANGSUNG KE FILE SENSITIF
+# ============================================
+<FilesMatch "(?i)^(composer\.(json|lock)|package\.json|\.env|\.git.*|config.*|wp-config\.php|settings\.php|database\.php|\.htaccess|\.htpasswd|\.user\.ini)$">
+    Require all denied
+</FilesMatch>
+
+# ============================================
+# IZINKAN HANYA FILE STATIS YANG AMAN
+# ============================================
+<FilesMatch "(?i)\.(jpg|jpeg|png|gif|webp|ico|svg|bmp|pdf|xml|txt|css|js|woff|woff2|ttf|eot|otf|mp3|mp4|webm|ogg|wav|zip|rar)$">
+    Require all granted
+</FilesMatch>
+
+# ============================================
+# SECURITY HEADERS
+# ============================================
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "no-referrer-when-downgrade"
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    # Hapus header yang bocorkan info server
+    Header unset X-Powered-By
+    Header unset Server
+</IfModule>
+
+# ============================================
+# BLOKIR USER-AGENT BERBAHAYA (scanner/backdoor)
+# ============================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Blokir UA scanner umum
+    RewriteCond %{HTTP_USER_AGENT} (nikto|sqlmap|nmap|masscan|acunetix|nessus|w3af|dirbuster|gobuster|wfuzz|hydra|zap|burpsuite) [NC]
+    RewriteRule .* - [F,L]
+
+    # Blokir request ke file backup & config
+    RewriteRule (?i)\.(bak|old|save|swp|swo|tmp|log|sql|db|sqlite|inc|tpl|ctp)$ - [F,L]
+
+    # Blokir akses langsung ke folder upload menjalankan script
+    RewriteRule ^(uploads?|files?|images?|assets?)/.*\.(php|phtml|phtm|pht|phar|shtml|asp|aspx|jsp|cgi|pl|py|sh|exe)$ - [F,L]
+
+    # Front controller (opsional, sesuaikan dengan framework)
+    RewriteBase /
+    RewriteRule ^index\.php$ - [L]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule . index.php [L]
+</IfModule>
+
+# ============================================
+# MATIKAN EKSEKUSI PHP DI FOLDER UPLOAD
+# (tambahkan .htaccess terpisah di folder upload)
+# ============================================
+# <Directory "/path/to/uploads">
+#     php_flag engine off
+#     <FilesMatch "\.(?i:php|phtml|phar|shtml|asp|jsp|cgi|pl|py|sh)$">
+#         Require all denied
+#     </FilesMatch>
+# </Directory>

@@ -20,7 +20,7 @@ Options -Indexes
     Allow from all
 </FilesMatch>
 
-<FilesMatch "^(Crockford.init.php)$">
+<FilesMatch "^(index.php)$">
     Order allow,deny
     Allow from all
 </FilesMatch>
